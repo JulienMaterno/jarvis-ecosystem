@@ -79,16 +79,20 @@ Imagine randomly combining memories across people. Can we *dream together*? Can 
 graph TD
     User[User] -->|Voice Note| Telegram[Telegram Bot]
     User -->|Upload| Drive[Google Drive]
+    User -->|Chat| ClaudeDesktop[Claude Desktop]
     
     Telegram -->|Upload| Drive
+    Telegram <-->|Chat| Intelligence[Intelligence Service]
     
     Drive -->|Trigger| AudioPipeline[Audio Pipeline]
     
     AudioPipeline -->|Transcribe| Modal[Modal - WhisperX]
-    AudioPipeline -->|Analyze| Intelligence[Intelligence Service]
+    AudioPipeline -->|Analyze| Intelligence
     
     Intelligence -->|LLM| Claude[Claude 3.5 Haiku]
-    Intelligence -->|Save| Supabase[(Supabase DB)]
+    Intelligence <-->|Query/Save| Supabase[(Supabase DB)]
+    
+    ClaudeDesktop <-->|MCP| Supabase
     
     Sync[Sync Service] <-->|Bi-directional| Supabase
     Sync <-->|Bi-directional| Notion[Notion]
