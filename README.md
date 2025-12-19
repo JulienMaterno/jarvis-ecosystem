@@ -101,12 +101,42 @@ graph TD
 
 ##  The 4 Microservices
 
-| Service | Description | Tech Stack |
-|---------|-------------|------------|
-| **[Audio Pipeline](https://github.com/JulienMaterno/jarvis-audio-pipeline)** | Monitors Google Drive, transcribes audio using Modal (GPU), and orchestrates the flow. | Python, Modal, Google Drive API |
-| **[Intelligence Service](https://github.com/JulienMaterno/jarvis-intelligence-service)** | The "Brain". Receives transcripts, analyzes them with Claude AI, and saves structured data. | FastAPI, Cloud Run, Anthropic |
-| **[Sync Service](https://github.com/JulienMaterno/jarvis-sync-service)** | Keeps your data in sync across Notion, Google Contacts, Calendar, and Supabase. | Python, Notion API, Google APIs |
-| **[Telegram Bot](https://github.com/JulienMaterno/jarvis-telegram-bot)** | Simple interface to send voice notes to the system on the go. | Python, Telegram API |
+| Service | Role | Description | Tech Stack |
+|---------|------|-------------|------------|
+| **[Intelligence Service](https://github.com/JulienMaterno/jarvis-intelligence-service)** | 🧠 **THE CORE** | The brain of the ecosystem. ALL AI processing happens here. Receives requests from other services, analyzes data with Claude, and orchestrates business logic. | FastAPI, Cloud Run, Anthropic Claude |
+| **[Audio Pipeline](https://github.com/JulienMaterno/jarvis-audio-pipeline)** | 🎤 Ingestion | Monitors Google Drive for audio, transcribes using Modal (GPU), saves transcript, then **calls Intelligence Service** for analysis. No AI here - audio only. | Python, Modal, Google Drive API |
+| **[Sync Service](https://github.com/JulienMaterno/jarvis-sync-service)** | 🔄 Pure Sync | Bidirectional sync between Notion, Google, and Supabase. No AI, no business logic - just keeps data in sync across platforms. | Python, Notion API, Google APIs |
+| **[Telegram Bot](https://github.com/JulienMaterno/jarvis-telegram-bot)** | 📱 User Interface | Entry point for voice notes and chat. Uploads audio to Drive (triggers Audio Pipeline), and **calls Intelligence Service** for chat. Also receives notifications. | Python, Telegram API |
+
+### Architecture Principle: Intelligence Service is the Hub
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Audio Pipeline │     │  Telegram Bot   │     │  Sync Service   │
+│   (Audio Only)  │     │ (User Interface)│     │  (Pure Sync)    │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         │   ┌───────────────────┴───────────────────┐   │
+         │   │                                       │   │
+         ▼   ▼                                       │   │
+┌─────────────────────────────────────────┐          │   │
+│      🧠 Intelligence Service            │          │   │
+│      ─────────────────────────          │          │   │
+│      • ALL AI (Claude 3.5 Haiku)        │          │   │
+│      • ALL Business Logic               │          │   │
+│      • Task Extraction                  │          │   │
+│      • Journal Analysis                 │          │   │
+│      • Meeting Processing               │          │   │
+│      • Future: Chat, RAG, etc.          │          │   │
+└─────────────────┬───────────────────────┘          │   │
+                  │                                   │   │
+                  ▼                                   ▼   ▼
+         ┌─────────────────────────────────────────────────┐
+         │              Supabase (Central DB)              │
+         │  ─────────────────────────────────────────────  │
+         │  contacts │ meetings │ tasks │ reflections │... │
+         └─────────────────────────────────────────────────┘
+```
 
 ---
 
