@@ -96,8 +96,41 @@ graph TD
     
     Sync[Sync Service] <-->|Bi-directional| Supabase
     Sync <-->|Bi-directional| Notion[Notion]
-    Sync <-->|Bi-directional| Google[Google Contacts/Calendar]
+    Sync <-->|Bi-directional| Google[Google Contacts/Calendar/Gmail]
 ```
+
+## 🛠️ Tech Stack
+
+- **Intelligence**: Python, FastAPI, Anthropic Claude (Sonnet 4.5)
+- **Transcription**: Modal (WhisperX)
+- **Database**: Supabase (PostgreSQL)
+- **Infrastructure**: Google Cloud Run (Serverless), Cloud Build (CI/CD)
+- **Interface**: Telegram Bot
+
+## 🔄 Key Workflows
+
+### 1. Voice Note Processing
+1. User sends voice note to Telegram Bot.
+2. Bot uploads file to Google Drive.
+3. Audio Pipeline detects file, downloads it.
+4. Modal transcribes audio (GPU-accelerated).
+5. Transcript sent to Intelligence Service.
+6. Intelligence Service analyzes (extracts tasks, meetings, reflections).
+7. Data saved to Supabase.
+8. Sync Service pushes updates to Notion.
+
+### 2. Daily Journaling
+1. Sync Service triggers "Evening Journal" prompt.
+2. Intelligence Service analyzes day's activities (Calendar, Emails, Tasks).
+3. Generates personalized reflection questions.
+4. Sends prompt via Telegram.
+5. User replies with voice/text.
+6. Reply processed as a Journal Entry.
+
+### 3. Smart Sync
+- **Gmail**: Incremental sync using `historyId` (only fetches changes).
+- **Calendar**: Incremental sync using `syncToken`.
+- **Contacts**: Bidirectional sync with Notion CRM.
 
 ##  The 4 Microservices
 
