@@ -83,4 +83,39 @@ The system is a **Personal AI Ecosystem** composed of 4 distinct microservices.
 - **Rule**: NEVER guess Anthropic Model IDs (e.g., "sonnet-4.5").
 - **Action**: If unsure, run a local script using `anthropic.models.list()` to verify available IDs before committing code.
 
+## 6. AGENTS.md Documentation (IMPORTANT)
 
+**Before modifying ANY service, READ its AGENTS.md file first.**
+
+Each service has an `AGENTS.md` file at the root that explains:
+- Service boundaries and responsibilities
+- Integration points and API formats
+- Database schema and relationships
+- What is safe to modify vs what should NOT be touched
+- Debugging tips and common pitfalls
+
+### Location of AGENTS.md Files:
+- `jarvis-intelligence-service/AGENTS.md` - LLM logic, prompts, analysis
+- `jarvis-audio-pipeline/AGENTS.md` - Transcription, Modal, Google Drive
+- `jarvis-sync-service/AGENTS.md` - **LOCKED** - Do not modify without permission
+- `jarvis-telegram-bot/AGENTS.md` - User interface, message handling
+
+### Key Rules from AGENTS.md:
+1. **Intelligence Service**: All AI/LLM code goes HERE and ONLY here
+2. **Audio Pipeline**: NO AI logic - just transcribe and forward
+3. **Sync Service**: LOCKED - production-critical, don't modify
+4. **Telegram Bot**: NO AI logic - just receive/send messages
+
+### Service Communication Pattern:
+```
+User -> Telegram Bot -> Audio Pipeline -> Intelligence Service -> Database
+                                                    |
+                                                    v
+                                              Sync Service -> Notion/Google
+```
+
+### Telegram vs Intelligence Service Responsibilities:
+- **Telegram Bot**: Receives messages, forwards voice to pipeline, displays results
+- **Intelligence Service**: Processes transcripts, calls Claude AI, sends notifications TO bot
+
+The Intelligence Service calls `TELEGRAM_BOT_URL/send_message` to notify users - it does NOT implement any Telegram API directly.
