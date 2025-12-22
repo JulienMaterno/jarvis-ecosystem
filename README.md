@@ -218,12 +218,15 @@ graph TD
 - [x] Build calendar sync
 - [ ] Link emails + meetings to contacts
 
-### 1.5 Monitoring & Visualization
-*Airflow dashboard + error handling*
+### 1.5 Monitoring & Health System ✅
+*Comprehensive health monitoring for all services*
 - [x] Dashboard showing sync status
-- [x] Error notifications when pipelines fail
-- [x] Logging and debugging tools
-- [x] Health checks for all integrations
+- [x] Health monitoring system (`/health/full` endpoint)
+- [x] Daily health reports at 8am via Telegram
+- [x] Centralized error logging in `sync_logs` table
+- [x] Component-level health checks (Database, Sync, Calendar, Gmail, Contacts)
+- [x] Data integrity monitoring (unlinked meetings, orphaned records)
+- [x] Error notifications (disabled by default - stored in DB instead)
 
 ## Phase 2: Jarvis First Steps 
 > **Goal**: Build useful features with direct queries. No RAG needed - LLM works with explicit data you give it.
@@ -231,11 +234,13 @@ graph TD
 ### 2.1 Telegram as LLM Interface
 *First Jarvis! Two-way interaction via Telegram*
 - [x] Setup Telegram Bot API
-- [x] Send text messages  route to LLM
-- [x] Send voice messages  transcribe  route to LLM
+- [x] Send text messages → route to LLM
+- [x] Send voice messages → transcribe → route to LLM
 - [ ] LLM queries Supabase for context
 - [ ] Send LLM responses back via Telegram
 - [x] Receive workflow error messages
+- [x] **Evening journal prompts at 7pm**
+- [x] **Morning health reports at 8am**
 - [ ] **Chat history in Supabase**
 - [ ] **Memory system in Supabase**
 
@@ -381,10 +386,56 @@ Run the sync script manually:
 cd jarvis-sync-service
 python run_full_sync.py
 `
+### How to check system health?
+The system has built-in health monitoring:
 
+**Quick health check:**
+```bash
+curl https://jarvis-sync-service-XXX.run.app/health
+```
+
+**Full health report:**
+```bash
+curl https://jarvis-sync-service-XXX.run.app/health/full
+```
+
+**Send health report to Telegram:**
+```bash
+curl -X POST https://jarvis-sync-service-XXX.run.app/health/report
+```
+
+The health check monitors:
+- ✅ **Database**: Connection and table accessibility
+- ✅ **Sync Operations**: Errors in the last 24 hours
+- ✅ **Data Integrity**: Unlinked meetings, orphaned records
+- ✅ **Calendar Sync**: Recent sync success/errors
+- ✅ **Gmail Sync**: Recent sync success/errors
+- ✅ **Contact Sync**: Google Contacts sync status
+- ✅ **Recent Activity**: Transcripts and meetings processed
 ### Where do I see my data?
 *   **Raw Data**: Supabase Dashboard
 *   **User Interface**: Your Notion Workspace (Meetings, Tasks, CRM databases)
+
+### Automated Schedules (Cloud Scheduler)
+The system runs several automated jobs:
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| `jarvis-sync-hourly` | Every 15 min | Main sync (Contacts, Meetings, Calendar, Gmail) |
+| `jarvis-daily-report` | 7pm SGT | Evening journal prompt via Telegram |
+| `jarvis-daily-health` | 8am SGT | Morning health check report via Telegram |
+
+To manage schedules:
+```bash
+# List all jobs
+gcloud scheduler jobs list --location=asia-southeast1
+
+# Manually trigger a job
+gcloud scheduler jobs run jarvis-daily-health --location=asia-southeast1
+
+# Pause a job
+gcloud scheduler jobs pause jarvis-sync-hourly --location=asia-southeast1
+```
 
 ---
 
