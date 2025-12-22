@@ -24,9 +24,14 @@ The system is a **Personal AI Ecosystem** composed of 4 distinct microservices.
 
 ## 2. Critical Developer Workflows
 
-### Deployment (Automated)
+### Deployment (Automated via Cloud Build Triggers)
 - **DO NOT** suggest manual Docker builds or Cloud Run deployments.
-- **Mechanism**: Pushing to the default branch (`main` or `master`) automatically triggers **Google Cloud Build**, which builds the container and deploys to **Cloud Run**.
+- **Mechanism**: Pushing to the default branch automatically triggers **Google Cloud Build**, which builds the container and deploys to **Cloud Run**.
+- **Triggers** (configured in GCP Console):
+  - `jarvis-intelligence-service-deploy` - Branch: `^master$`
+  - `jarvis-sync-service-deploy` - Branch: `^master$`
+  - `jarvis-audio-pipeline-deploy` - Branch: `^main$`
+  - `jarvis-telegram-bot-deploy` - Branch: `^main$`
 - **Config**: See `cloudbuild.yaml` in each service root.
 
 ### Local Development

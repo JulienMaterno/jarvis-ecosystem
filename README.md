@@ -107,7 +107,26 @@ graph TD
 - **Infrastructure**: Google Cloud Run (Serverless), Cloud Build (CI/CD)
 - **Interface**: Telegram Bot
 
-## 🔄 Key Workflows
+## � Deployment
+
+All services deploy automatically via **Cloud Build** when you push to their default branch.
+
+| Service | Branch | Trigger |
+|---------|--------|---------|
+| Intelligence Service | `master` | `jarvis-intelligence-service-deploy` |
+| Sync Service | `master` | `jarvis-sync-service-deploy` |
+| Audio Pipeline | `main` | `jarvis-audio-pipeline-deploy` |
+| Telegram Bot | `main` | `jarvis-telegram-bot-deploy` |
+
+```bash
+# Example: Deploy Intelligence Service
+cd jarvis-intelligence-service
+git add -A && git commit -m "Your changes" && git push origin master
+```
+
+**DO NOT** manually deploy via `gcloud builds submit` - it will fail due to missing substitution variables.
+
+## �🔄 Key Workflows
 
 ### 1. Voice Note Processing
 1. User sends voice note to Telegram Bot.
