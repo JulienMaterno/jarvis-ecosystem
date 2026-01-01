@@ -149,6 +149,70 @@ response = requests.post(
 
 ---
 
+### 5. 💬 **Beeper Bridge Service** (NEW)
+**Repository**: `jarvis-beeper-bridge`  
+**Technology**: Python + FastAPI  
+**Deployment**: Local Docker (with Cloudflare Tunnel)  
+**Purpose**: Unified messaging gateway for all chat platforms
+
+**Why Local?**: Beeper Desktop runs locally and requires direct localhost access.
+Exposed to cloud services via Cloudflare Tunnel.
+
+**Connected Platforms**:
+- WhatsApp
+- LinkedIn Messaging
+- Telegram (personal)
+- Slack
+- Other Matrix-bridged services
+
+**Capabilities**:
+1. **Inbox Management**: Get chats needing response (inbox-zero workflow)
+2. **Search**: Find chats by name or platform
+3. **Send Messages**: Send messages (with explicit user confirmation)
+4. **Archive/Unarchive**: Manage chat archive status
+5. **Mark Read**: Mark conversations as read
+
+**Architecture on Windows**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   CLOUD (Google Cloud Run)                       │
+│  Intelligence Service ─────────────────────────────────────────▶│
+└─────────────────────────┬───────────────────────────────────────┘
+                          │ HTTPS via Cloudflare Tunnel
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   LOCAL (Windows Laptop)                         │
+│  Docker: cloudflared ──▶ beeper-bridge ──▶ netsh portproxy      │
+│                                                    │              │
+│                                            Beeper Desktop         │
+│                                            (IPv6 [::1]:23373)    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Integration**:
+```python
+# Intelligence Service calls Beeper Bridge
+response = await httpx.get(
+    "https://beeper.new-world-project.com/inbox",
+    params={"platform": "whatsapp", "limit": 10}
+)
+
+# Send message (requires user confirmation in chat)
+response = await httpx.post(
+    "https://beeper.new-world-project.com/send",
+    json={"chat_id": "!abc123:beeper.local", "message": "Hello!"}
+)
+```
+
+**Intelligence Service Tools**:
+- `get_beeper_inbox` - List unread/unanswered chats
+- `search_beeper_chats` - Find chats by name
+- `send_beeper_message` - Send messages (requires confirmation)
+- `archive_beeper_chat` - Archive handled conversations
+- `get_beeper_status` - Check connection status
+
+---
+
 ## Complete System Architecture
 
 ```
@@ -156,54 +220,54 @@ response = requests.post(
 │                         USER INPUTS                              │
 │  • Audio files (Google Drive, local folder)                      │
 │  • Telegram messages/voice notes                                 │
-└─────────────────┬───────────────────────────┬───────────────────┘
-                  │                           │
-                  ▼                           ▼
-        ┌─────────────────────┐   ┌─────────────────────┐
-        │  Audio Pipeline     │   │   Telegram Bot      │
-        │  (Transcription)    │   │   (User Interface)  │
-        └──────────┬──────────┘   └──────────┬──────────┘
-                   │                          │
-                   │ POST /api/v1/analyze    │ POST /api/v1/chat
-                   │                          │
-                   └──────────┬───────────────┘
-                              ▼
-                ┌─────────────────────────────┐
-                │   Intelligence Service      │
-                │   (THIS REPO)               │
-                │   • Claude AI Analysis      │
-                │   • Data Extraction         │
-                │   • Database Operations     │
-                └──────────┬──────────────────┘
-                           │
-                           │ Saves to
-                           ▼
-                ┌─────────────────────────────┐
-                │      Supabase Database      │
-                │   • Transcripts             │
-                │   • Meetings                │
-                │   • Reflections             │
-                │   • Journals                │
-                │   • Tasks                   │
-                │   • Contacts (CRM)          │
-                └──────────┬──────────────────┘
-                           │
-                           │ Reads & syncs
-                           ▼
-                ┌─────────────────────────────┐
-                │      Sync Service           │
-                │   (Supabase → Notion)       │
-                └──────────┬──────────────────┘
-                           │
-                           │ Creates/updates
-                           ▼
-                ┌─────────────────────────────┐
-                │      Notion Workspace       │
-                │   • Tasks database          │
-                │   • Meetings database       │
-                │   • Reflections database    │
-                │   • Journals database       │
-                └─────────────────────────────┘
+│  • Beeper messages (WhatsApp, LinkedIn, Slack, etc.)             │
+└───────────┬──────────────────────┬──────────────────┬───────────┘
+            │                      │                  │
+            ▼                      ▼                  ▼
+  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+  │ Audio Pipeline  │   │  Telegram Bot   │   │  Beeper Bridge  │
+  │ (Transcription) │   │ (User Interface)│   │ (Messaging Hub) │
+  └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
+           │                     │                     │
+           │ POST /analyze       │ POST /chat          │ /inbox, /send
+           │                     │                     │
+           └──────────┬──────────┴──────────┬──────────┘
+                      ▼                     │
+            ┌─────────────────────────────┐ │
+            │   Intelligence Service      │◀┘
+            │   • Claude AI Analysis      │
+            │   • Data Extraction         │
+            │   • Beeper Tools            │
+            │   • Database Operations     │
+            └──────────┬──────────────────┘
+                       │
+                       │ Saves to
+                       ▼
+            ┌─────────────────────────────┐
+            │      Supabase Database      │
+            │   • Transcripts             │
+            │   • Meetings                │
+            │   • Reflections, Journals   │
+            │   • Tasks, Contacts (CRM)   │
+            │   • Beeper Chats/Messages   │
+            └──────────┬──────────────────┘
+                       │
+                       │ Reads & syncs
+                       ▼
+            ┌─────────────────────────────┐
+            │      Sync Service           │
+            │   (Supabase ↔ Notion)       │
+            │   (Supabase ↔ Google)       │
+            │   (Supabase ↔ Beeper)       │
+            └──────────┬──────────────────┘
+                       │
+                       │ Creates/updates
+                       ▼
+            ┌─────────────────────────────┐
+            │      External Systems       │
+            │   • Notion Workspace        │
+            │   • Google Calendar/Gmail   │
+            └─────────────────────────────┘
 ```
 
 ---

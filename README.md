@@ -89,7 +89,7 @@ graph TD
     AudioPipeline -->|Transcribe| Modal[Modal - WhisperX]
     AudioPipeline -->|Analyze| Intelligence
     
-    Intelligence -->|LLM| Claude[Claude 3.5 Haiku]
+    Intelligence -->|LLM| Claude[Claude Sonnet 4.5]
     Intelligence <-->|Query/Save| Supabase[(Supabase DB)]
     
     ClaudeDesktop <-->|MCP| Supabase
