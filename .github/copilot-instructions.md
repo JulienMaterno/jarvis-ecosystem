@@ -1,13 +1,13 @@
 # Jarvis Ecosystem Copilot Instructions
 
 ## 1. Architecture & "Big Picture"
-The system is a **Personal AI Ecosystem** composed of 4 distinct microservices. 
+The system is a **Personal AI Ecosystem** composed of **5 distinct services**. 
 **Crucial Rule**: All AI/LLM logic resides EXCLUSIVELY in `jarvis-intelligence-service`. Other services are "dumb" pipes or interfaces.
 
 ### Service Boundaries
 - **`jarvis-intelligence-service` (The Brain)**: 
   - **Responsibility**: LLM processing, decision making, parsing user intent, database writes for analyzed data.
-  - **Tech**: Python, FastAPI (implied), Anthropic API.
+  - **Tech**: Python, FastAPI, Anthropic API.
   - **Path**: `jarvis-intelligence-service/`
 - **`jarvis-audio-pipeline` (The Ears)**:
   - **Responsibility**: Monitors Google Drive, transcribes audio using Modal (GPU), sends text to Intelligence Service.
@@ -21,6 +21,11 @@ The system is a **Personal AI Ecosystem** composed of 4 distinct microservices.
   - **Responsibility**: User input (Voice/Text) and Notifications. Forwards inputs to Intelligence Service or Drive.
   - **Tech**: Python, Telegram Bot API.
   - **Path**: `jarvis-telegram-bot/`
+- **`jarvis-beeper-bridge` (The Messenger)**: 
+  - **Responsibility**: Unified messaging gateway for WhatsApp, LinkedIn, Slack via Beeper Desktop.
+  - **Tech**: Python, FastAPI, runs locally with Cloudflare Tunnel.
+  - **Path**: `jarvis-beeper-bridge/`
+  - **Special**: Runs locally (not in Cloud Run) because Beeper Desktop requires localhost access.
 
 ## 2. Critical Developer Workflows
 
@@ -51,6 +56,7 @@ The system is a **Personal AI Ecosystem** composed of 4 distinct microservices.
 ### Data Flow
 1. **Voice Note**: User -> Telegram Bot -> Google Drive -> Audio Pipeline (Transcribe) -> Intelligence Service (Analyze) -> Database/Notion.
 2. **Chat**: User -> Telegram Bot -> Intelligence Service -> Response.
+3. **Messaging**: User asks Jarvis -> Intelligence Service -> Beeper Bridge -> WhatsApp/LinkedIn/Slack.
 
 ### Infrastructure
 - **Database**: Supabase (PostgreSQL).
