@@ -80,6 +80,7 @@ graph TD
     User[User] -->|Voice Note| Telegram[Telegram Bot]
     User -->|Upload| Drive[Google Drive]
     User -->|Chat| ClaudeDesktop[Claude Desktop]
+    User -->|Messages| BeeperDesktop[Beeper Desktop]
     
     Telegram -->|Upload| Drive
     Telegram <-->|Chat| Intelligence[Intelligence Service]
@@ -91,12 +92,20 @@ graph TD
     
     Intelligence -->|LLM| Claude[Claude Sonnet 4.5]
     Intelligence <-->|Query/Save| Supabase[(Supabase DB)]
+    Intelligence <-->|Send/Read Messages| BeeperBridge[Beeper Bridge]
+    
+    BeeperBridge <-->|Local API| BeeperDesktop
+    BeeperDesktop <-->|WhatsApp| WhatsApp[WhatsApp]
+    BeeperDesktop <-->|LinkedIn| LinkedIn[LinkedIn]
+    BeeperDesktop <-->|Slack| Slack[Slack]
+    BeeperDesktop <-->|15+ Platforms| Others[Telegram, Signal, etc.]
     
     ClaudeDesktop <-->|MCP| Supabase
     
     Sync[Sync Service] <-->|Bi-directional| Supabase
     Sync <-->|Bi-directional| Notion[Notion]
     Sync <-->|Bi-directional| Google[Google Contacts/Calendar/Gmail]
+    Sync <-->|Sync Messages| BeeperBridge
 ```
 
 ## 🛠️ Tech Stack
@@ -106,17 +115,20 @@ graph TD
 - **Database**: Supabase (PostgreSQL)
 - **Infrastructure**: Google Cloud Run (Serverless), Cloud Build (CI/CD)
 - **Interface**: Telegram Bot
+- **Messaging**: Beeper Desktop (WhatsApp, LinkedIn, Telegram, Slack, 15+ platforms)
+- **Local Bridge**: Docker, Cloudflare Tunnel
 
-## � Deployment
+## 🚀 Deployment
 
-All services deploy automatically via **Cloud Build** when you push to their default branch.
+All cloud services deploy automatically via **Cloud Build** when you push to their default branch.
 
-| Service | Branch | Trigger |
-|---------|--------|---------|
-| Intelligence Service | `master` | `jarvis-intelligence-service-deploy` |
-| Sync Service | `master` | `jarvis-sync-service-deploy` |
-| Audio Pipeline | `main` | `jarvis-audio-pipeline-deploy` |
-| Telegram Bot | `main` | `jarvis-telegram-bot-deploy` |
+| Service | Branch | Trigger | Location |
+|---------|--------|---------|----------|
+| Intelligence Service | `master` | `jarvis-intelligence-service-deploy` | Cloud Run |
+| Sync Service | `master` | `jarvis-sync-service-deploy` | Cloud Run |
+| Audio Pipeline | `main` | `jarvis-audio-pipeline-deploy` | Cloud Run |
+| Telegram Bot | `main` | `jarvis-telegram-bot-deploy` | Cloud Run |
+| **Beeper Bridge** | N/A | Manual Docker | **Local Laptop** |
 
 ```bash
 # Example: Deploy Intelligence Service
@@ -138,7 +150,18 @@ git add -A && git commit -m "Your changes" && git push origin master
 7. Data saved to Supabase.
 8. Sync Service pushes updates to Notion.
 
-### 2. Daily Journaling
+### 2. Messaging via Beeper (WhatsApp, LinkedIn, etc.)
+1. User asks Jarvis via Telegram: "Send a message to John on WhatsApp"
+2. Intelligence Service queries contacts, finds John
+3. Intelligence Service checks Beeper Bridge for John's WhatsApp chat
+4. Jarvis asks: "What would you like to say?"
+5. User responds with message content
+6. Jarvis shows draft and asks for confirmation
+7. User confirms: "yes, send it"
+8. Intelligence Service calls Beeper Bridge → Beeper Desktop → WhatsApp
+9. Message delivered, conversation archived in Supabase
+
+### 3. Daily Journaling
 1. Sync Service triggers "Evening Journal" prompt.
 2. Intelligence Service analyzes day's activities (Calendar, Emails, Tasks).
 3. Generates personalized reflection questions.
@@ -146,19 +169,21 @@ git add -A && git commit -m "Your changes" && git push origin master
 5. User replies with voice/text.
 6. Reply processed as a Journal Entry.
 
-### 3. Smart Sync
+### 4. Smart Sync
 - **Gmail**: Incremental sync using `historyId` (only fetches changes).
 - **Calendar**: Incremental sync using `syncToken`.
 - **Contacts**: Bidirectional sync with Notion CRM.
+- **Beeper Messages**: Syncs messages/chats to Supabase every 15 minutes.
 
-##  The 4 Microservices
+##  The 5 Microservices
 
 | Service | Role | Description | Tech Stack |
 |---------|------|-------------|------------|
-| **[Intelligence Service](https://github.com/JulienMaterno/jarvis-intelligence-service)** | 🧠 **THE CORE** | The brain of the ecosystem. ALL AI processing happens here. Receives requests from other services, analyzes data with Claude, and orchestrates business logic. | FastAPI, Cloud Run, Anthropic Claude |
+| **[Intelligence Service](https://github.com/JulienMaterno/jarvis-intelligence-service)** | 🧠 **THE CORE** | The brain of the ecosystem. ALL AI processing happens here. Receives requests from other services, analyzes data with Claude, orchestrates business logic, and controls messaging. | FastAPI, Cloud Run, Anthropic Claude |
 | **[Audio Pipeline](https://github.com/JulienMaterno/jarvis-audio-pipeline)** | 🎤 Ingestion | Monitors Google Drive for audio, transcribes using Modal (GPU), saves transcript, then **calls Intelligence Service** for analysis. No AI here - audio only. | Python, Modal, Google Drive API |
-| **[Sync Service](https://github.com/JulienMaterno/jarvis-sync-service)** | 🔄 Pure Sync | Bidirectional sync between Notion, Google, and Supabase. No AI, no business logic - just keeps data in sync across platforms. | Python, Notion API, Google APIs |
+| **[Sync Service](https://github.com/JulienMaterno/jarvis-sync-service)** | 🔄 Pure Sync | Bidirectional sync between Notion, Google, Beeper, and Supabase. No AI, no business logic - just keeps data in sync across platforms. | Python, Notion API, Google APIs |
 | **[Telegram Bot](https://github.com/JulienMaterno/jarvis-telegram-bot)** | 📱 User Interface | Entry point for voice notes and chat. Uploads audio to Drive (triggers Audio Pipeline), and **calls Intelligence Service** for chat. Also receives notifications. | Python, Telegram API |
+| **[Beeper Bridge](https://github.com/JulienMaterno/jarvis-beeper-bridge)** | 💬 Messaging Hub | Local bridge to Beeper Desktop, enabling unified messaging across WhatsApp, LinkedIn, Telegram, Slack, and 15+ platforms. **Called by Intelligence Service** for sending/reading messages. | Python, FastAPI, Docker, Cloudflare Tunnel |
 
 ### Architecture Principle: Intelligence Service is the Hub
 
@@ -179,9 +204,21 @@ git add -A && git commit -m "Your changes" && git push origin master
 │      • Task Extraction                  │          │   │
 │      • Journal Analysis                 │          │   │
 │      • Meeting Processing               │          │   │
+│      • Messaging Control (Beeper)       │          │   │
 │      • Future: Chat, RAG, etc.          │          │   │
 └─────────────────┬───────────────────────┘          │   │
-                  │                                   │   │
+                  │                   │               │   │
+                  │                   ▼               │   │
+                  │         ┌─────────────────┐      │   │
+                  │         │ Beeper Bridge   │      │   │
+                  │         │  (Local/Docker) │      │   │
+                  │         └─────────┬───────┘      │   │
+                  │                   │               │   │
+                  │                   ▼               │   │
+                  │         ┌─────────────────┐      │   │
+                  │         │ Beeper Desktop  │      │   │
+                  │         │ (WhatsApp, etc.)│      │   │
+                  │         └─────────────────┘      │   │
                   ▼                                   ▼   ▼
          ┌─────────────────────────────────────────────────┐
          │              Supabase (Central DB)              │
