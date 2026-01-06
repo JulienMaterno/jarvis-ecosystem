@@ -1,7 +1,7 @@
 # Jarvis Ecosystem Copilot Instructions
 
 ## 1. Architecture & "Big Picture"
-The system is a **Personal AI Ecosystem** composed of **5 distinct services**. 
+The system is a **Personal AI Ecosystem** composed of **6 distinct services**. 
 **Crucial Rule**: All AI/LLM logic resides EXCLUSIVELY in `jarvis-intelligence-service`. Other services are "dumb" pipes or interfaces.
 
 ### Service Boundaries
@@ -26,6 +26,11 @@ The system is a **Personal AI Ecosystem** composed of **5 distinct services**.
   - **Tech**: Python, FastAPI, runs locally with Cloudflare Tunnel.
   - **Path**: `jarvis-beeper-bridge/`
   - **Special**: Runs locally (not in Cloud Run) because Beeper Desktop requires localhost access.
+- **`jarvis-screenpipe-bridge` (The Eyes)**: 
+  - **Responsibility**: Auto-captures meetings from any app (Zoom, Google Meet, WhatsApp) using Screenpipe.
+  - **Tech**: Python, FastAPI, Screenpipe (local), Cloudflare Tunnel.
+  - **Path**: `jarvis-screenpipe-bridge/`
+  - **Special**: Bridge runs in Docker, but Screenpipe MUST run natively (needs OS-level screen/audio access).
 
 ## 2. Critical Developer Workflows
 
